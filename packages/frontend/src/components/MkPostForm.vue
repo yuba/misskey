@@ -201,6 +201,7 @@ const recentHashtags = ref(JSON.parse(miLocalStorage.getItem('hashtags') ?? '[]'
 const imeText = ref('');
 const showingOptions = ref(false);
 const textAreaReadOnly = ref(false);
+comst composing = ref(false);
 
 const draftKey = computed((): string => {
 	let key = props.channel ? `channel:${props.channel.id}` : '';
@@ -573,15 +574,17 @@ function clear() {
 function onKeydown(ev: KeyboardEvent) {
 	if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey) && canPost.value) post();
 
-	if (ev.key === 'Escape') emit('esc');
+	if (ev.key === 'Escape' && !composing.value) emit('esc');
 }
 
 function onCompositionUpdate(ev: CompositionEvent) {
 	imeText.value = ev.data;
+	composing.value = true;
 }
 
 function onCompositionEnd(ev: CompositionEvent) {
 	imeText.value = '';
+	composing.value = false;
 }
 
 async function onPaste(ev: ClipboardEvent) {
