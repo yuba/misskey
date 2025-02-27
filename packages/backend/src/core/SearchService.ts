@@ -220,7 +220,7 @@ export class SearchService {
 			.leftJoinAndSelect('renote.user', 'renoteUser');
 
 		if (this.config.fulltextSearch?.provider === 'sqlPgroonga') {
-			query.andWhere('note.text &@ :q', { q });
+			query.andWhere('note.text &@~ :q', { q });
 		} else {
 			const searchComponent = parseSearchString(q);
 			this.loggerService.getLogger('SearchService').info('search component: ' + JSON.stringify(searchComponent));
