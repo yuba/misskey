@@ -19,6 +19,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div :class="[$style.overallProgress, canRetry ? $style.overallProgressError : null]" :style="{ '--op': `${overallProgress}%` }"></div>
 
 		<div class="_gaps_s _spacer">
+			<MkTip k="uploader">
+				{{ i18n.ts._uploader.tip }}
+			</MkTip>
+
 			<div class="_gaps_s">
 				<div
 					v-for="ctx in items"
@@ -69,7 +73,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</MkSelect>
 
 			<div>{{ i18n.tsx._uploader.maxFileSizeIsX({ x: $i.policies.maxFileSizeMb + 'MB' }) }}</div>
-			<div>{{ i18n.ts._uploader.allowedTypes }}: {{ $i.policies.uploadableFileTypes.join(', ') }}</div>
+
+			<!-- クライアントで検出するMIME typeとサーバーで検出するMIME typeが異なる場合があり、混乱の元になるのでとりあえず隠しとく -->
+			<!-- https://github.com/misskey-dev/misskey/issues/16091 -->
+			<!--<div>{{ i18n.ts._uploader.allowedTypes }}: {{ $i.policies.uploadableFileTypes.join(', ') }}</div>-->
 		</div>
 	</div>
 
@@ -249,6 +256,23 @@ async function done() {
 
 function showMenu(ev: MouseEvent, item: typeof items.value[0]) {
 	const menu: MenuItem[] = [];
+
+	menu.push({
+		icon: 'ti ti-cursor-text',
+		text: i18n.ts.rename,
+		action: async () => {
+			const { result, canceled } = await os.inputText({
+				type: 'text',
+				title: i18n.ts.rename,
+				placeholder: item.name,
+				default: item.name,
+			});
+			if (canceled) return;
+			if (result.trim() === '') return;
+
+			item.name = result;
+		},
+	});
 
 	if (CROPPING_SUPPORTED_TYPES.includes(item.file.type) && !item.waiting && !item.uploading && !item.uploaded) {
 		menu.push({
