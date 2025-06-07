@@ -86,7 +86,7 @@ RUN apt-get update \
 
 # add package.json to add pnpm
 COPY ./package.json ./package.json
-RUN sed -E 's/("version": "[-.0-9alphbet]*)"/\1-reax.work-1"/' -i ./packages/misskey-js/package.json ./package.json   # for reax.work
+RUN sed -E 's/("version": "[-.0-9alphbet]*)"/\1-reax.work-1"/' -i ./package.json   # for reax.work
 RUN node -e "console.log(JSON.parse(require('node:fs').readFileSync('./package.json')).packageManager)" | xargs npm install -g
 
 USER misskey
