@@ -27,6 +27,7 @@ COPY --link ["packages/sw/package.json", "./packages/sw/"]
 COPY --link ["packages/misskey-js/package.json", "./packages/misskey-js/"]
 COPY --link ["packages/misskey-reversi/package.json", "./packages/misskey-reversi/"]
 COPY --link ["packages/misskey-bubble-game/package.json", "./packages/misskey-bubble-game/"]
+RUN sed -E 's/("version": "[-.0-9alphbet]*)"/\1-reax.work-1"/' -i ./packages/misskey-js/package.json ./package.json   # for reax.work
 
 ARG NODE_ENV=production
 
@@ -36,6 +37,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
 	pnpm i --frozen-lockfile --aggregate-output
 
 COPY --link . ./
+RUN sed -E 's/("version": "[-.0-9alphbet]*)"/\1-reax.work-1"/' -i ./packages/misskey-js/package.json ./package.json   # for reax.work
 
 RUN git submodule update --init
 RUN pnpm build
@@ -57,6 +59,7 @@ COPY --link ["packages/backend/package.json", "./packages/backend/"]
 COPY --link ["packages/misskey-js/package.json", "./packages/misskey-js/"]
 COPY --link ["packages/misskey-reversi/package.json", "./packages/misskey-reversi/"]
 COPY --link ["packages/misskey-bubble-game/package.json", "./packages/misskey-bubble-game/"]
+RUN sed -E 's/("version": "[-.0-9alphbet]*)"/\1-reax.work-1"/' -i ./packages/misskey-js/package.json ./package.json   # for reax.work
 
 ARG NODE_ENV=production
 
@@ -83,6 +86,7 @@ RUN apt-get update \
 
 # add package.json to add pnpm
 COPY ./package.json ./package.json
+RUN sed -E 's/("version": "[-.0-9alphbet]*)"/\1-reax.work-1"/' -i ./packages/misskey-js/package.json ./package.json   # for reax.work
 RUN node -e "console.log(JSON.parse(require('node:fs').readFileSync('./package.json')).packageManager)" | xargs npm install -g
 
 USER misskey
@@ -100,6 +104,7 @@ COPY --chown=misskey:misskey --from=native-builder /misskey/packages/misskey-bub
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/built ./packages/backend/built
 COPY --chown=misskey:misskey --from=native-builder /misskey/fluent-emojis /misskey/fluent-emojis
 COPY --chown=misskey:misskey . ./
+RUN sed -E 's/("version": "[-.0-9alphbet]*)"/\1-reax.work-1"/' -i ./packages/misskey-js/package.json ./package.json   # for reax.work
 
 ENV LD_PRELOAD=/usr/local/lib/libjemalloc.so
 ENV NODE_ENV=production
