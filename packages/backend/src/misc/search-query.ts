@@ -112,65 +112,84 @@ class Tokenizer {
 	}
 
 	public getNext(): Token {
-		let inQuote = false;
-		let inEscape = false;
-		let token = '';
-		for (; this.pos < this.q.length; ++this.pos) {
-			const c = this.q[this.pos];
+		for (; this.pos < this.q.length; ) {
+			const c = this.q[this.pos++];
 			switch (c) {
 				case '"':
-					if (inEscape) {
-						token += '"';
-					} else if (inQuote) {
-						++this.pos;
-						return token; // クオート閉じの場合はトークンが「OR」でもりOR制御トークンでなくリテラル「OR」テキストトークンとして返す
-					} else if (token.length > 0) {
-						return token;
-					} else {
-						inQuote = true;
-					}
-					inEscape = false;
-					break;
+					return this.getQuotedWord();
 				case '\\':
-					if (inEscape) {
-						token += '\\';
-						inEscape = false;
-					} else {
-						inEscape = true;
+					if (this.pos >= this.q.length) {
+						return null;
 					}
-					break;
+					return this.getWord(this.q[this.pos++].toLowerCase());
 				case '(':
 				case ')':
 				case '+':
 				case '-':
-					if (inEscape || inQuote) {
-						token += c;
-					} else if (token.length > 0) {
-						// ここまで読みためているテキストトークンをいったん返してしまう
-						return (token === 'or') ? { control: 'or' } : token;
-					} else {
-						++this.pos;
-						return { control: c };
-					}
-					inEscape = false;
-					break;
+					return { control: c };
 				default:
 					// eslint-disable-next-line no-irregular-whitespace
-					if (inEscape || inQuote || !c.match(/[\s　]/)) {
-						token += c.toLowerCase();
-					} else if (token.length > 0) {
-						// 空白文字。テキストトークンの読み終わり
-						++this.pos;
-						return (token === 'or') ? { control: 'or' } : token;
-					} else {
-						// 先頭の空白や連続した空白の読み飛ばし
+					if (!c.match(/[\s　]/)) {
+						return this.getWord(c.toLowerCase());
 					}
-					inEscape = false;
-					break;
+					continue; // 先頭の空白や連続した空白の読み飛ばし
 			}
 		}
-		return token.length === 0 ? null : (token === 'or' && !inQuote) ? { control: 'or' } : token;
+		return null;
 	};
+
+	private getWord(firstChar: string): string | { control: 'or'; } {
+		let token = firstChar;
+		loop: for (; this.pos < this.q.length; ) {
+			const c = this.q[this.pos++];
+			switch (c) {
+				case '(':
+				case ')':
+				case '+':
+				case '-':
+				case '"':
+					// ここで文字列は一旦終わり。次回読むときにまたこの制御文字から読み始めてもらう
+					--this.pos;
+					break loop;
+				case '\\':
+					if (this.pos >= this.q.length) {
+						break loop;
+					}
+					token += this.q[this.pos++].toLowerCase();
+					continue;
+				default:
+					// eslint-disable-next-line no-irregular-whitespace
+					if (c.match(/[\s　]/)) {
+						// 空白文字。テキストトークンの読み終わり
+						break loop;
+					}
+					token += c.toLowerCase();
+					continue;
+			}
+		}
+		return (token === 'or') ? { control: 'or' } : token;
+	}
+
+	private getQuotedWord(): string {
+		let token = '';
+		for (; this.pos < this.q.length; ) {
+			const c = this.q[this.pos++];
+			switch (c) {
+				case '"':
+					return token;
+				case '\\':
+					if (this.pos >= this.q.length) {
+						return token;
+					}
+					token += this.q[this.pos++].toLowerCase();
+					break;
+				default:
+					token += c.toLowerCase();
+				  break;
+			}
+		}
+		return token; // 閉じクオートがなかった場合は最後に補ったものとして現在の文字列を返す
+	}
 }
 
 function parsePartialSearchString(

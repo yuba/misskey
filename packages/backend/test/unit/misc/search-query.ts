@@ -19,6 +19,63 @@ describe('misc:search-query', () => {
 		expect(parseSearchString(q)).toStrictEqual(condition);
 	});
 
+	test('unclosed quotation', () => {
+		const q = 'word "next';
+		const condition: SearchCondition = {
+			type: 'and',
+			subConditions: [
+				{ type: 'contains', value: 'word' },
+				{ type: 'contains', value: 'next' },
+			],
+		};
+		expect(parseSearchString(q)).toStrictEqual(condition);
+	});
+
+	test('control chars terminates words', () => {
+		const q = 'word+next-3rd(4th"5th")';
+		const condition: SearchCondition = {
+			type: 'and',
+			subConditions: [
+				{ type: 'contains', value: 'word' },
+				{ type: 'contains', value: 'next' },
+				{ type: 'not_contains', value: '3rd' },
+				{ type: 'contains', value: '4th' },
+				{ type: 'contains', value: '5th' },
+			],
+		};
+		expect(parseSearchString(q)).toStrictEqual(condition);
+	});
+
+	test('quoted "OR" is literal', () => {
+		const q = '"OR"Or"z';
+		const condition: SearchCondition = {
+			type: 'or',
+			subConditions: [
+				{ type: 'contains', value: 'or' },
+				{ type: 'contains', value: 'z' },
+			],
+		};
+		expect(parseSearchString(q)).toStrictEqual(condition);
+	});
+
+	test('unclosed quoted "OR" is literal', () => {
+		const q = 'z oR "or';
+		const condition: SearchCondition = {
+			type: 'or',
+			subConditions: [
+				{ type: 'contains', value: 'z' },
+				{ type: 'contains', value: 'or' },
+			],
+		};
+		expect(parseSearchString(q)).toStrictEqual(condition);
+	});
+
+	test('escaped chars', () => {
+		const q = '\\a\\"\\(\\)\\+\\-\\\\';
+		const condition: SearchCondition = { type: 'contains', value: 'a"()+-\\' };
+		expect(parseSearchString(q)).toStrictEqual(condition);
+	});
+
 	test('simple and', () => {
 		const q = 'word1 word2 + word3+word4';
 		const condition: SearchCondition = {
@@ -64,13 +121,17 @@ describe('misc:search-query', () => {
 		const condition: SearchCondition = {
 			type: 'and',
 			subConditions: [
-				{ type: 'or', subConditions: [
-					{ type: 'and', subConditions: [
-						{ type: 'contains', value: 'word1' },
-						{ type: 'contains', value: 'word2' },
-					] },
-					{ type: 'contains', value: 'word3' },
-				] },
+				{
+					type: 'or', subConditions: [
+						{
+							type: 'and', subConditions: [
+								{ type: 'contains', value: 'word1' },
+								{ type: 'contains', value: 'word2' },
+							],
+						},
+						{ type: 'contains', value: 'word3' },
+					],
+				},
 				{ type: 'not_contains', value: 'word4' },
 			],
 		};
@@ -83,10 +144,12 @@ describe('misc:search-query', () => {
 			type: 'and',
 			subConditions: [
 				{ type: 'contains', value: 'word1' },
-				{ type: 'or', subConditions: [
-					{ type: 'contains', value: 'word2' },
-					{ type: 'contains', value: 'word3' },
-				] },
+				{
+					type: 'or', subConditions: [
+						{ type: 'contains', value: 'word2' },
+						{ type: 'contains', value: 'word3' },
+					],
+				},
 			],
 		};
 		expect(parseSearchString(q)).toStrictEqual(condition);
@@ -98,13 +161,17 @@ describe('misc:search-query', () => {
 			type: 'and',
 			subConditions: [
 				{ type: 'contains', value: 'word1' },
-				{ type: 'or', subConditions: [
-					{ type: 'contains', value: 'word2' },
-					{ type: 'and', subConditions: [
-						{ type: 'contains', value: 'word3' },
-						{ type: 'not_contains', value: 'word4' },
-					] },
-				] },
+				{
+					type: 'or', subConditions: [
+						{ type: 'contains', value: 'word2' },
+						{
+							type: 'and', subConditions: [
+								{ type: 'contains', value: 'word3' },
+								{ type: 'not_contains', value: 'word4' },
+							],
+						},
+					],
+				},
 			],
 		};
 		expect(parseSearchString(q)).toStrictEqual(condition);
@@ -117,10 +184,12 @@ describe('misc:search-query', () => {
 			subConditions: [
 				{ type: 'contains', value: 'word1' },
 				{ type: 'not_contains', value: 'word2' },
-				{ type: 'or', subConditions: [
-					{ type: 'not_contains', value: 'word3' },
-					{ type: 'not_contains', value: 'word4' },
-				] },
+				{
+					type: 'or', subConditions: [
+						{ type: 'not_contains', value: 'word3' },
+						{ type: 'not_contains', value: 'word4' },
+					],
+				},
 			],
 		};
 		expect(parseSearchString(q)).toStrictEqual(condition);
@@ -128,25 +197,33 @@ describe('misc:search-query', () => {
 
 	test('unclosed brackets', () => {
 		const q = 'word1 (word2 OR word3';
-		const condition: SearchCondition = { type: 'and', subConditions: [
-			{ type: 'contains', value: 'word1' },
-			{ type: 'or', subConditions: [
-				{ type: 'contains', value: 'word2' },
-				{ type: 'contains', value: 'word3' },
-			] },
-		] };
+		const condition: SearchCondition = {
+			type: 'and', subConditions: [
+				{ type: 'contains', value: 'word1' },
+				{
+					type: 'or', subConditions: [
+						{ type: 'contains', value: 'word2' },
+						{ type: 'contains', value: 'word3' },
+					],
+				},
+			],
+		};
 		expect(parseSearchString(q)).toStrictEqual(condition);
 	});
 
 	test('overclosed brackets', () => {
 		const q = '(word1 OR word2)) word3';
-		const condition: SearchCondition = { type: 'and', subConditions: [
-			{ type: 'or', subConditions: [
-				{ type: 'contains', value: 'word1' },
-				{ type: 'contains', value: 'word2' },
-			] },
-			{ type: 'contains', value: 'word3' },
-		] };
+		const condition: SearchCondition = {
+			type: 'and', subConditions: [
+				{
+					type: 'or', subConditions: [
+						{ type: 'contains', value: 'word1' },
+						{ type: 'contains', value: 'word2' },
+					],
+				},
+				{ type: 'contains', value: 'word3' },
+			],
+		};
 		expect(parseSearchString(q)).toStrictEqual(condition);
 	});
 
@@ -158,28 +235,34 @@ describe('misc:search-query', () => {
 
 	test('empty brackets', () => {
 		const q = 'word1 () word2';
-		const condition: SearchCondition = { type: 'and', subConditions: [
-			{ type: 'contains', value: 'word1' },
-			{ type: 'contains', value: 'word2' },
-		] };
+		const condition: SearchCondition = {
+			type: 'and', subConditions: [
+				{ type: 'contains', value: 'word1' },
+				{ type: 'contains', value: 'word2' },
+			],
+		};
 		expect(parseSearchString(q)).toStrictEqual(condition);
 	});
 
 	test('empty brackets with not', () => {
 		const q = 'word1 -() word2';
-		const condition: SearchCondition = { type: 'and', subConditions: [
-			{ type: 'contains', value: 'word1' },
-			{ type: 'contains', value: 'word2' },
-		] };
+		const condition: SearchCondition = {
+			type: 'and', subConditions: [
+				{ type: 'contains', value: 'word1' },
+				{ type: 'contains', value: 'word2' },
+			],
+		};
 		expect(parseSearchString(q)).toStrictEqual(condition);
 	});
 
 	test('empty brackets with or', () => {
 		const q = 'word1 OR() word2';
-		const condition: SearchCondition = { type: 'and', subConditions: [
-			{ type: 'contains', value: 'word1' },
-			{ type: 'contains', value: 'word2' },
-		] };
+		const condition: SearchCondition = {
+			type: 'and', subConditions: [
+				{ type: 'contains', value: 'word1' },
+				{ type: 'contains', value: 'word2' },
+			],
+		};
 		expect(parseSearchString(q)).toStrictEqual(condition);
 	});
 
@@ -191,12 +274,14 @@ describe('misc:search-query', () => {
 
 	test('escaped characters', () => {
 		const q = 'word\\- word\\+ word\\( word\\\\';
-		const condition: SearchCondition = { type: 'and', subConditions: [
-			{ type: 'contains', value: 'word-' },
-			{ type: 'contains', value: 'word+' },
-			{ type: 'contains', value: 'word(' },
-			{ type: 'contains', value: 'word\\' },
-		] };
+		const condition: SearchCondition = {
+			type: 'and', subConditions: [
+				{ type: 'contains', value: 'word-' },
+				{ type: 'contains', value: 'word+' },
+				{ type: 'contains', value: 'word(' },
+				{ type: 'contains', value: 'word\\' },
+			],
+		};
 		expect(parseSearchString(q)).toStrictEqual(condition);
 	});
 
