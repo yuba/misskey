@@ -7,9 +7,10 @@ if [[ $(git status --porcelain) != "" ]]; then
 fi
 
 git checkout master
-git fetch ssh://git@github.com/misskey-dev/misskey.git
-tag=$(git tag | grep "^20" | grep -v "-" | sort | tail -n1)
-git merge $tag
+git fetch ssh://git@github.com/misskey-dev/misskey.git --tags
+tag=$(git tag | grep "^20" | grep -v "-" | sort -k 1n -k 2n -k 3n| tail -n1)
+echo TAG ID: ${tag}
+git merge --no-edit $tag
 
 docker build -t yuba/misskey:latest -t yuba/misskey:$tag-reax.work-1 .
 
