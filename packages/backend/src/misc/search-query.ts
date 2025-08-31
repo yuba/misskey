@@ -112,27 +112,20 @@ class Tokenizer {
 	}
 
 	public getNext(): Token {
-		for (; this.pos < this.q.length; ) {
-			const c = this.q[this.pos++];
+		while (this.hasNextChar()) {
+			const c = this.getNextChar();
 			switch (c) {
 				case '"':
-					return this.getQuotedWord();
+					return this.getQuotedPhrase();
 				case '\\':
-					if (this.pos >= this.q.length) {
-						return null;
-					}
-					return this.getWord(this.q[this.pos++].toLowerCase());
-				case '(':
-				case ')':
-				case '+':
-				case '-':
+					return this.hasNextChar() ? this.getWord(this.getNextChar()) : null; // エスケープ文字は次の文字を読み飛ばす
+				case '(': case ')': case '+': case '-':
 					return { control: c };
+				case ' ': case '\t': case '\n': case '\r': case '　': // 全角スペースも空白文字として扱う
+					// 空白文字は読み飛ばす
+					continue;
 				default:
-					// eslint-disable-next-line no-irregular-whitespace
-					if (!c.match(/[\s　]/)) {
-						return this.getWord(c.toLowerCase());
-					}
-					continue; // 先頭の空白や連続した空白の読み飛ばし
+					return this.getWord(c);
 			}
 		}
 		return null;
@@ -140,55 +133,61 @@ class Tokenizer {
 
 	private getWord(firstChar: string): string | { control: 'or'; } {
 		let token = firstChar;
-		loop: for (; this.pos < this.q.length; ) {
-			const c = this.q[this.pos++];
+		loop: while (this.hasNextChar()) {
+			const c = this.getNextChar();
 			switch (c) {
-				case '(':
-				case ')':
-				case '+':
-				case '-':
-				case '"':
+				case '(': case ')': case '+': case '-': case '"':
 					// ここで文字列は一旦終わり。次回読むときにまたこの制御文字から読み始めてもらう
-					--this.pos;
+					this.pushBackChar();
 					break loop;
 				case '\\':
-					if (this.pos >= this.q.length) {
+					if (!this.hasNextChar()) {
 						break loop;
 					}
-					token += this.q[this.pos++].toLowerCase();
+					token += this.getNextChar();
 					continue;
+				case ' ': case '\t': case '\n': case '\r': case '　':
+					// 空白文字。テキストトークンの読み終わり
+					break loop;
 				default:
-					// eslint-disable-next-line no-irregular-whitespace
-					if (c.match(/[\s　]/)) {
-						// 空白文字。テキストトークンの読み終わり
-						break loop;
-					}
-					token += c.toLowerCase();
+					token += c;
 					continue;
 			}
 		}
 		return (token === 'or') ? { control: 'or' } : token;
 	}
 
-	private getQuotedWord(): string {
+	private getQuotedPhrase(): string {
 		let token = '';
-		for (; this.pos < this.q.length; ) {
-			const c = this.q[this.pos++];
+		while (this.hasNextChar()) {
+			const c = this.getNextChar();
 			switch (c) {
 				case '"':
 					return token;
 				case '\\':
-					if (this.pos >= this.q.length) {
+					if (!this.hasNextChar()) {
 						return token;
 					}
-					token += this.q[this.pos++].toLowerCase();
+					token += this.getNextChar();
 					break;
 				default:
-					token += c.toLowerCase();
-				  break;
+					token += c;
+					break;
 			}
 		}
 		return token; // 閉じクオートがなかった場合は最後に補ったものとして現在の文字列を返す
+	}
+
+	private hasNextChar(): boolean {
+		return this.pos < this.q.length;
+	}
+
+	private getNextChar(): string {
+		return this.q[this.pos++].toLocaleLowerCase();
+	}
+
+	private pushBackChar(): void {
+		--this.pos;
 	}
 }
 
